@@ -3,6 +3,20 @@
 import csv
 import datetime
 
+payload = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//csv2caldav//EN
+BEGIN:VEVENT
+UID:{uid}
+DTSTAMP:{dtstamp}
+DTSTART:{dtstart}
+DURATION:{dtend}
+SUMMARY:{summary}
+LOCATION:{location}
+END:VEVENT
+END:VCALENDAR
+"""
+
 def convertdatetime(datetime):
     format = "%Y%m%dT%H%M%SZ";
     return datetime.strftime(format);
