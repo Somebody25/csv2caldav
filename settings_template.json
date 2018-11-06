@@ -1,0 +1,10 @@
+{
+  "connection": {
+    "url":"",
+    "username":"",
+    "password":""
+  },
+  "csv": {
+    "delimiter":""
+  }
+}
