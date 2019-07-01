@@ -35,38 +35,44 @@ END:VCALENDAR
 """
 
 def convertdatetime(datetime):
-    format = "%Y%m%dT%H%M%SZ"
-    return datetime.strftime(format)
+    pattern = "%Y%m%dT%H%M%SZ"
+    return datetime.strftime(pattern)
 
 def generateuid():
     return uuid.uuid4()
 
-events = []
+def main():
+    events = []
 
-with open("settings.json") as settings_file:
-    settings = json.load(settings_file)
+    with open("settings.json") as settings_file:
+        settings = json.load(settings_file)
 
-with open("input.csv") as file:
-    reader = csv.reader(file, delimiter=str(settings['csv'].get('delimiter', ';')))
-    for row in reader:
-        event = {}
-        date_input = row[0] + row[1]
-        date_input = datetime.datetime.strptime(date_input, '%d.%m.%Y%H:%M')
-        event["uid"] = generateuid();
-        event["dtstamp"] = convertdatetime(datetime.datetime.now())
-        event["dtstart"] = convertdatetime(date_input);
-        event["dtend"] = convertdatetime(date_input + datetime.timedelta(hours=1))
-        event["summary"] = row[2]
-        event["location"] = row[3]
-        event["description"] = row[4]
-        events.append(event)
+    with open("input.csv") as file:
+        reader = csv.reader(file, delimiter=str(settings['csv'].get('delimiter', ';')))
+        for row in reader:
+            event = {}
+            date_input = row[0] + row[1]
+            date_input = datetime.datetime.strptime(date_input, '%d.%m.%Y%H:%M')
+            event["uid"] = generateuid()
+            event["dtstamp"] = convertdatetime(datetime.datetime.now())
+            event["dtstart"] = convertdatetime(date_input)
+            event["dtend"] = convertdatetime(date_input + datetime.timedelta(hours=1))
+            event["summary"] = row[2]
+            event["location"] = row[3]
+            event["description"] = row[4]
+            events.append(event)
 
-client = caldav.DAVClient(**settings['connection'])
+    client = caldav.DAVClient(**settings['connection'])
 
-calendars = client.principal().calendars()
-for calendar in calendars:
-    if calendar.url == settings['connection']['url']:
-        for event in events:
-            cal_event = calendar.add_event(payload.format(**event))
-            print('Event added!')
-        break
+    calendars = client.principal().calendars()
+    for calendar in calendars:
+        if calendar.url == settings['connection']['url']:
+            for event in events:
+                calendar.add_event(payload.format(**event))
+                print('Event added!')
+            break
+
+
+if __name__ == '__main__':
+    main()
+    
