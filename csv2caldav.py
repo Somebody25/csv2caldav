@@ -18,6 +18,9 @@ import datetime
 import uuid
 import caldav
 import json
+import icalendar
+import pytz
+import io
 
 payload = """BEGIN:VCALENDAR
 VERSION:2.0
@@ -41,26 +44,37 @@ def convertdatetime(datetime):
 def generateuid():
     return uuid.uuid4()
 
+def create_calendar():
+    ical = icalendar.Calendar()
+
+    ical.add('version', '2.0')
+    ical.add('prodid', '-//csv2caldav//EN')
+    return ical
+
 def main():
     events = []
 
     with open("settings.json") as settings_file:
         settings = json.load(settings_file)
 
-    with open("input.csv") as file:
+    tz = pytz.timezone('Europe/Vienna')
+
+    with io.open(file="input.csv", encoding="utf-8") as file:
         reader = csv.reader(file, delimiter=str(settings['csv'].get('delimiter', ';')))
         for row in reader:
-            event = {}
+            event = icalendar.Event()
             date_input = row[0] + row[1]
             date_input = datetime.datetime.strptime(date_input, '%d.%m.%Y%H:%M')
-            event["uid"] = generateuid()
-            event["dtstamp"] = convertdatetime(datetime.datetime.now())
-            event["dtstart"] = convertdatetime(date_input)
-            event["dtend"] = convertdatetime(date_input + datetime.timedelta(hours=1))
-            event["summary"] = row[2]
-            event["location"] = row[3]
-            event["description"] = row[4]
-            events.append(event)
+            event.add('uid', generateuid())
+            event.add('dtstamp', tz.localize(datetime.datetime.now()))
+            event.add('dtstart', tz.localize(date_input))
+            event.add('dtend', tz.localize(date_input + datetime.timedelta(hours=1)))
+            event.add('summary', row[2])
+            event.add('location', row[3])
+            event.add('description', row[4])
+            ical = create_calendar()
+            ical.add_component(event)
+            events.append(ical)
 
     client = caldav.DAVClient(**settings['connection'])
 
@@ -68,9 +82,8 @@ def main():
     for calendar in calendars:
         if calendar.url == settings['connection']['url']:
             for event in events:
-                calendar.add_event(payload.format(**event))
-                print('Event added!')
-            break
+                #print(ical.to_ical())
+                calendar.add_event(event.to_ical())
 
 
 if __name__ == '__main__':
