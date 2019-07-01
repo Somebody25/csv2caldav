@@ -22,21 +22,6 @@ import icalendar
 import pytz
 import io
 
-payload = """BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//csv2caldav//EN
-BEGIN:VEVENT
-UID:{uid}
-DTSTAMP:{dtstamp}
-DTSTART:{dtstart}
-DTEND:{dtend}
-SUMMARY:{summary}
-LOCATION:{location}
-DESCRIPTION:{description}
-END:VEVENT
-END:VCALENDAR
-"""
-
 def convertdatetime(datetime):
     pattern = "%Y%m%dT%H%M%SZ"
     return datetime.strftime(pattern)
