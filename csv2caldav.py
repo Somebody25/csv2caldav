@@ -20,7 +20,7 @@ import caldav
 import json
 import icalendar
 import pytz
-import io
+import click
 
 def convertdatetime(datetime):
     pattern = "%Y%m%dT%H%M%SZ"
@@ -36,30 +36,34 @@ def create_calendar():
     ical.add('prodid', '-//csv2caldav//EN')
     return ical
 
-def main():
+@click.command()
+@click.option('-t', '--timezone', type=str, default='Europe/Vienna', help='Specify the timezone when the events take place. Default: Europe/Vienna')
+@click.option('-d', '-delimiter', type=str, default=';', help='The delimiter used in the input csv. Default: ;')
+@click.option('--time-delta', type=int, default=60, help='The duration of the events in minutes. Default: 60')
+@click.argument('input-file', type=click.File(mode='r', encoding='UTF-8'))
+def main(timezone, delimiter, time_delta, input_file):
     events = []
 
     with open("settings.json") as settings_file:
         settings = json.load(settings_file)
 
-    tz = pytz.timezone('Europe/Vienna')
+    tz = pytz.timezone(timezone)
 
-    with io.open(file="input.csv", encoding="utf-8") as file:
-        reader = csv.reader(file, delimiter=str(settings['csv'].get('delimiter', ';')))
-        for row in reader:
-            event = icalendar.Event()
-            date_input = row[0] + row[1]
-            date_input = datetime.datetime.strptime(date_input, '%d.%m.%Y%H:%M')
-            event.add('uid', generateuid())
-            event.add('dtstamp', tz.localize(datetime.datetime.now()))
-            event.add('dtstart', tz.localize(date_input))
-            event.add('dtend', tz.localize(date_input + datetime.timedelta(hours=1)))
-            event.add('summary', row[2])
-            event.add('location', row[3])
-            event.add('description', row[4])
-            ical = create_calendar()
-            ical.add_component(event)
-            events.append(ical)
+    reader = csv.reader(input_file, delimiter=str(settings['csv'].get('delimiter', delimiter)))
+    for row in reader:
+        event = icalendar.Event()
+        date_input = row[0] + row[1]
+        date_input = datetime.datetime.strptime(date_input, '%d.%m.%Y%H:%M')
+        event.add('uid', generateuid())
+        event.add('dtstamp', tz.localize(datetime.datetime.now()))
+        event.add('dtstart', tz.localize(date_input))
+        event.add('dtend', tz.localize(date_input + datetime.timedelta(minutes=time_delta)))
+        event.add('summary', row[2])
+        event.add('location', row[3])
+        event.add('description', row[4])
+        ical = create_calendar()
+        ical.add_component(event)
+        events.append(ical)
 
     client = caldav.DAVClient(**settings['connection'])
 
