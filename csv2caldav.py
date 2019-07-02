@@ -40,7 +40,7 @@ def create_calendar():
 @click.command()
 @click.option('-t', '--timezone', type=str, default='Europe/Vienna', help='Specify the timezone when the events take place. Default: Europe/Vienna')
 @click.option('-d', '--delimiter', type=str, default=';', help='The delimiter used in the input csv. Default: ;')
-@click.option('-s', '--settings-file', type=click.File('r'), default=os.path.realpath("./settings.json"))
+@click.option('-s', '--settings-file', type=click.File('r'), default=os.path.realpath("./settings.json"), help='Set the settings file')
 @click.option('--time-delta', type=int, default=60, help='The duration of the events in minutes. Default: 60')
 @click.option('--print-ical', is_flag=True, help='Print the generated icalendar request')
 @click.argument('input-file', type=click.File(mode='r', encoding='UTF-8'))
