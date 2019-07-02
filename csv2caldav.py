@@ -9,7 +9,7 @@ in a CALDAV calendar from a csv input source
 __author__ = "Marcel Körbler"
 __copyright__ = "Copyright 2018, Marcel Körbler"
 __license__ = "MIT"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __maintainer__ = "Marcel Körbler"
 __email__ = "somebody25@icloud.com"
 
@@ -21,6 +21,7 @@ import json
 import icalendar
 import pytz
 import click
+import os
 
 def convertdatetime(datetime):
     pattern = "%Y%m%dT%H%M%SZ"
@@ -38,18 +39,24 @@ def create_calendar():
 
 @click.command()
 @click.option('-t', '--timezone', type=str, default='Europe/Vienna', help='Specify the timezone when the events take place. Default: Europe/Vienna')
-@click.option('-d', '-delimiter', type=str, default=';', help='The delimiter used in the input csv. Default: ;')
+@click.option('-d', '--delimiter', type=str, default=';', help='The delimiter used in the input csv. Default: ;')
+@click.option('-s', '--settings-file', type=click.File('r'), default=os.path.realpath("./settings.json"))
 @click.option('--time-delta', type=int, default=60, help='The duration of the events in minutes. Default: 60')
+@click.option('--print-ical', is_flag=True, help='Print the generated icalendar request')
 @click.argument('input-file', type=click.File(mode='r', encoding='UTF-8'))
-def main(timezone, delimiter, time_delta, input_file):
+def main(timezone, delimiter, settings_file, time_delta, print_ical, input_file):
+    click.echo('csv2caldav v' + __version__)
+
     events = []
 
-    with open("settings.json") as settings_file:
-        settings = json.load(settings_file)
+    click.echo('Loading settings')
+    settings = json.load(settings_file)
 
+    click.echo('Using timezone: ' + timezone)
     tz = pytz.timezone(timezone)
 
-    reader = csv.reader(input_file, delimiter=str(settings['csv'].get('delimiter', delimiter)))
+    click.echo('Parsing csv')
+    reader = csv.reader(input_file, delimiter=delimiter)
     for row in reader:
         event = icalendar.Event()
         date_input = row[0] + row[1]
@@ -65,14 +72,21 @@ def main(timezone, delimiter, time_delta, input_file):
         ical.add_component(event)
         events.append(ical)
 
+    click.echo('Found events: ' + str(len(events)))
+
     client = caldav.DAVClient(**settings['connection'])
 
-    calendars = client.principal().calendars()
-    for calendar in calendars:
-        if calendar.url == settings['connection']['url']:
-            for event in events:
-                #print(ical.to_ical())
-                calendar.add_event(event.to_ical())
+    if print_ical:
+        for event in events:
+            click.echo(event.to_ical())
+
+    if click.confirm('Send to calendar?'):
+        calendars = client.principal().calendars()
+        for calendar in calendars:
+            if calendar.url == settings['connection']['url']:
+                for event in events:
+                    calendar.add_event(event.to_ical())
+                    click.echo('--Added event!--')
 
 
 if __name__ == '__main__':
